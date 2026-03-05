@@ -5,6 +5,18 @@
 
 ---
 
+## Files — Click to Copy
+
+| File | What it does |
+|---|---|
+| [`brain-schema.sql`](https://github.com/saafir-coder/open-brain/blob/main/brain-schema.sql) | Run this in Supabase SQL Editor |
+| [`supabase-function/index.ts`](https://github.com/saafir-coder/open-brain/blob/main/supabase-function/index.ts) | Deploy this as a Supabase Edge Function |
+| [`.env.example`](https://github.com/saafir-coder/open-brain/blob/main/.env.example) | Copy to `.env` and fill in your keys |
+
+> Open any file → click the **copy icon** (top right of the code block) to copy the full code.
+
+---
+
 ## What You're Building
 
 One Supabase database stores all your memories as vector embeddings.
