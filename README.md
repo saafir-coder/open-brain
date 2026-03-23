@@ -30,6 +30,31 @@ Cursor       ─┘
 
 ---
 
+## Architecture
+
+```
+┌─────────────┐     ┌──────────────────────┐     ┌──────────────┐
+│  Any AI Tool │────►│  Supabase Edge Func  │────►│   Supabase   │
+│  (via MCP)   │     │  capture-memory      │     │   pgvector   │
+└─────────────┘     └──────────────────────┘     └──────────────┘
+                           │         │
+                    ┌──────┘         └──────┐
+                    ▼                       ▼
+             ┌────────────┐         ┌─────────────┐
+             │  OpenAI    │         │  Claude      │
+             │  Embeddings│         │  Haiku       │
+             │  (1536-dim)│         │  (metadata)  │
+             └────────────┘         └─────────────┘
+```
+
+- **Supabase + pgvector** — Vector database for semantic memory storage
+- **Edge Function** — Serverless endpoint for storing and searching memories
+- **OpenAI** — Generates 1536-dimension embeddings for similarity search
+- **Claude Haiku** — Extracts metadata (type, topics, people, action items)
+- **MCP** — Lets any AI tool (Claude, ChatGPT, Cursor) query the same brain
+
+---
+
 ## Prerequisites
 
 - [Supabase](https://supabase.com) account (free tier works)
@@ -130,10 +155,69 @@ select * from brain.search_memories(
 
 ---
 
+## API Reference
+
+### POST `/functions/v1/capture-memory` — Store a memory
+
+Embeds the text, extracts metadata, and stores it in the brain.
+
+```bash
+curl -X POST https://YOUR_PROJECT_REF.supabase.co/functions/v1/capture-memory \
+  -H "Authorization: Bearer YOUR_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "The deploy pipeline uses GitHub Actions with a staging step",
+    "source": "claude-code",
+    "metadata": { "project": "open-brain" }
+  }'
+```
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `text` | string | Yes | The memory content to store |
+| `source` | string | No | Where this memory came from (e.g. `manual`, `claude-code`, `chatgpt`) |
+| `metadata` | object | No | Additional key-value pairs to store alongside the memory |
+
+**Response:** `201 Created` with the stored memory object.
+
+### GET `/functions/v1/capture-memory?q=QUERY` — Recall memories
+
+Searches stored memories by semantic similarity.
+
+```bash
+curl "https://YOUR_PROJECT_REF.supabase.co/functions/v1/capture-memory?q=deploy+pipeline" \
+  -H "Authorization: Bearer YOUR_ANON_KEY"
+```
+
+**Query parameters:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `q` | string | — | Natural language search query |
+| `limit` | number | 5 | Max results to return |
+| `threshold` | number | 0.3 | Minimum similarity score (0-1) |
+
+**Response:** Array of matching memories sorted by similarity score.
+
+### SQL — Direct similarity search
+
+If querying Supabase directly (e.g. from an Edge Function or client):
+
+```sql
+SELECT * FROM brain.search_memories(
+  '<embedding_vector>',  -- 1536-dim vector
+  5,                     -- limit
+  0.3                    -- similarity threshold
+);
+```
+
+---
+
 ## File Structure
 
 ```
-public/
 ├── README.md                    ← this file
 ├── brain-schema.sql             ← run in Supabase SQL editor
 ├── supabase-function/
@@ -164,6 +248,12 @@ See `.env.example` for all required variables.
 3. Claude Haiku extracts metadata (type, topics, people, action items)
 4. Everything stores in `brain.memories` in Supabase
 5. Any AI tool with MCP access can similarity-search your memories
+
+---
+
+## License
+
+MIT
 
 ---
 
